@@ -1,0 +1,40 @@
+/* PRIMER PROBLEMATICA */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* SEGUNDA PROBLEMATICA */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* TERCER PROBLEMATICA */
