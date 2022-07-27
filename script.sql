@@ -1320,6 +1320,60 @@ VALUES
 
 /* LINKEO DIRECCION CON CLIENTE*/
 
+ALTER TABLE cliente
+ADD COLUMN address_id INTEGER NOT NULL DEFAULT 101;
+
+ALTER TABLE empleado
+ADD COLUMN address_id INTEGER NOT NULL DEFAULT 101;
+
+ALTER TABLE sucursal
+ADD COLUMN address_id INTEGER NOT NULL DEFAULT 1;
+
+UPDATE sucursal
+SET address_id = branch_id;
+
+/*view que genera numero random positivo entre numero de sucursal mas alto y numero de direccion mas alto:*/
+CREATE VIEW random_num AS
+SELECT(
+SELECT CAST(
+((SELECT max(address_id)+1 FROM sucursal) + 
+(RANDOM()+9223372036854775808)/2.0/9223372036854775808 * 
+(SELECT max(address_id) - (SELECT max(address_id)+1 FROM sucursal)
+ FROM direccion)) AS INT ))AS 'num';
+
+
+/*SISTEMA RECURSIVO DE CREACION DE TABLA:*/
+
+CREATE TABLE numeros(
+	id INTEGER PRIMARY KEY,
+	n INTEGER NOT NULL
+);
+
+PRAGMA recursive_triggers = on;
+
+create temp trigger ttrig BEFORE insert on numeros
+when new.id < (SELECT max(address_id) FROM direccion) begin
+insert into numeros values (new.id + 1,(SELECT num FROM random_num));
+end;
+
+INSERT INTO numeros (id, n)
+VALUES (1,(SELECT num FROM random_num));
+
+DROP VIEW random_num;
+DROP TRIGGER ttrig;
+PRAGMA recursive_triggers = of;
+
+
+UPDATE cliente
+SET address_id = (SELECT n FROM numeros WHERE id = cliente.customer_id);
+
+UPDATE empleado
+SET address_id = (SELECT n FROM numeros WHERE id = empleado.employee_id);
+
+DROP TABLE numeros;
+
+/* ultimo punto prm 1*/
+
 UPDATE empleado
 set employee_hire_date = DATE(substr(employee_hire_date,7,4) ||'-' ||substr(employee_hire_date,4,2) ||'-' ||substr(employee_hire_date,1,2));
 
@@ -1332,3 +1386,57 @@ set employee_hire_date = DATE(substr(employee_hire_date,7,4) ||'-' ||substr(empl
 
 
 /* CUARTA PROBLEMATICA */
+
+
+/* PUNTO 4*/
+CREATE VIEW esquema_prestamos AS
+SELECT branch_id, CLIENTE.customer_id, prestamo.loan_id FROM CLIENTE
+LEFT JOIN prestamo
+ON cliente.customer_id = prestamo.customer_id
+order by branch_id;
+
+CREATE VIEW diagrama_prestamos AS
+SELECT esquema_prestamos.branch_id, count(loan_id) AS cant_prestamos, count(cliente.customer_id) AS cant_clientes
+from esquema_prestamos 
+INNER JOIN cliente on esquema_prestamos.branch_id = cliente.branch_id
+group by esquema_prestamos.branch_id;
+
+CREATE VIEW diagrama_promedio AS
+SELECT branch_id, CAST(round((((cant_prestamos*1.0)/cant_clientes)*100),1)as TEXT) || '%' as promedio from diagrama_prestamos;
+
+ALTER TABLE sucursal
+ADD COLUMN average_given_loans TEXT NOT NULL DEFAULT '0%';
+
+UPDATE sucursal
+SET average_given_loans = (SELECT promedio FROM diagrama_promedio WHERE branch_id = sucursal.branch_id)
+WHERE branch_id IN(SELECT branch_id FROM diagrama_promedio);
+
+DROP VIEW diagrama_prestamos;
+DROP VIEW diagrama_promedio;
+DROP VIEW esquema_prestamos;
+
+/* PUNTO 5*/
+CREATE TABLE auditoria_cuenta (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	old_id INT,
+	new_id INT, 
+	old_balance INT, 
+	new_balance INT, 
+	old_iban TEXT, 
+	new_iban TEXT, 
+	old_type TEXT, 
+	new_type TEXT, 
+	user_action TEXT, 
+	created_at TEXT
+);
+
+CREATE TRIGGER registro_movimientos_cuenta AFTER UPDATE ON cuenta
+WHEN old.balance<>new.balance OR old.iban<>new.iban OR old.account_type<>new.account_type
+BEGIN
+	INSERT INTO auditoria_cuenta (old_id,new_id,old_balance,new_balance, old_iban, new_iban, old_type, new_type, user_action, created_at)
+	VALUES (old.account_id, new.account_id, old.balance, new.balance, old.iban, new.iban, old.account_type, new.account_type, 'UPDATE', datetime('NOW'));
+END;
+
+UPDATE cuenta
+SET balance = balance - 10000
+WHERE account_id IN (10,11,12,13,14);
