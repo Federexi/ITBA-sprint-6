@@ -1440,23 +1440,70 @@ set employee_hire_date = DATE(substr(employee_hire_date,7,4) ||'-' ||substr(empl
   SELECT count(cliente.customer_id) as Cantidad_Clientes, sucursal.branch_name
   FROM cliente 
   INNER JOIN sucursal on cliente.branch_id = sucursal.branch_id
-  GROUP BY branch_name
+  GROUP BY sucursal.branch_id
   ORDER BY Cantidad_Clientes DESC;
 
 --PUNTO 2
 
-  SELECT count(empleado.branch_id) as Cantidad_Empleados,cliente.customer_name, branch_name
-  from sucursal
-  inner join cliente on sucursal.branch_id=cliente.branch_id
-  inner join empleado on sucursal.branch_id=empleado.branch_id
-  GROUP by branch_name;
+  CREATE VIEW c_cl AS
+    SELECT sucursal.branch_id, sucursal.branch_name,count(cliente.customer_id) as Cantidad_Clientes
+    FROM cliente 
+    INNER JOIN sucursal on cliente.branch_id = sucursal.branch_id
+    GROUP BY sucursal.branch_id
+    ORDER BY sucursal.branch_id;
+
+  CREATE VIEW c_emp_x_cl AS
+  SELECT c_cl.branch_id, branch_name, round((Cantidad_Clientes*1.0)/(count(empleado.employee_id)),2) as Cant_Empleados_por_cliente
+  FROM c_cl
+  INNER JOIN empleado ON empleado.branch_id = c_cl.branch_id
+  GROUP BY c_cl.branch_id
+  ORDER BY c_cl.branch_id;
+
+  ALTER TABLE sucursal
+  ADD COLUMN employee_amnt_per_client REAL NOT NULL DEFAULT 0.0;
+
+  UPDATE sucursal
+  SET employee_amnt_per_client = (SELECT Cant_Empleados_por_cliente FROM c_emp_x_cl WHERE branch_id = sucursal.branch_id)
+  WHERE branch_id IN(SELECT branch_id FROM c_emp_x_cl);
+
+  DROP VIEW c_cl;
+  DROP VIEW c_emp_x_cl;
+
 
 --PUNTO 3
 
-  SELECT count(tarjeta.account_id) as Cantidad_Tarjetas, tarjeta.type, branch_name
-  from sucursal
-  inner join tarjeta on sucursal.branch_id=tarjeta.account_id
-  GROUP by branch_name;
+  CREATE VIEW c_t_credit_x_s AS
+    SELECT count(account_id) as Cantidad_Tarjetas, type, cliente.branch_id
+    FROM tarjeta
+    INNER JOIN cliente ON cliente.customer_id = tarjeta.customer_id
+    GROUP BY cliente.branch_id
+    HAVING tarjeta.type = 'credit'
+    ORDER by cliente.branch_id;
+
+  CREATE VIEW c_t_dedit_x_s AS  
+    SELECT count(account_id) as Cantidad_Tarjetas, type, cliente.branch_id
+    FROM tarjeta
+    INNER JOIN cliente ON cliente.customer_id = tarjeta.customer_id
+    GROUP BY cliente.branch_id
+    HAVING tarjeta.type = 'debit'
+    ORDER by cliente.branch_id;
+    
+  ALTER TABLE sucursal
+  ADD COLUMN given_credit_cards INTEGER NOT NULL DEFAULT 0;
+
+  ALTER TABLE sucursal
+  ADD COLUMN given_dedit_cards INTEGER NOT NULL DEFAULT 0;
+
+  UPDATE sucursal
+  SET given_credit_cards = (SELECT Cantidad_Tarjetas FROM c_t_credit_x_s WHERE branch_id = sucursal.branch_id)
+  WHERE branch_id IN(SELECT branch_id FROM c_t_credit_x_s);
+
+  UPDATE sucursal
+  SET given_dedit_cards = (SELECT Cantidad_Tarjetas FROM c_t_dedit_x_s WHERE branch_id = sucursal.branch_id)
+  WHERE branch_id IN(SELECT branch_id FROM c_t_dedit_x_s);
+
+  DROP VIEW c_t_credit_x_s;
+  DROP VIEW c_t_dedit_x_s;
 
 
 --PUNTO 4
