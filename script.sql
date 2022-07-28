@@ -1630,3 +1630,27 @@ END;
 UPDATE cuenta 
 SET balance = balance - 10000
 WHERE account_id IN (10,11,12,13,14);
+
+--Crear índice para DNI en la tabla Cliente
+create unique index index_dni on cliente (customer_DNI)
+
+--Crear tabla movimientos, hacer una transferencia y registrarlo en la tabla movimientos
+
+begin TRANSACTION;
+
+update cuenta
+set balance = balance - 1000
+where account_id = 200;
+
+update cuenta 
+set balance = balance + 1000
+where account_id = 400;
+
+insert into movimientos(no_account, amount, type_operation, hour)
+values(200, 1000, "Transfer", time("now"));
+
+insert into movimientos(no_account, amount, type_operation, hour)
+values(400, 1000, "Transfer", time("now"));
+
+COMMIT;
+--Agregar un ROLLBACK en el lugar de COMMIT en caso de no poder realizar la operacíon completa
