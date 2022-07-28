@@ -1,9 +1,10 @@
-/* PRIMER PROBLEMATICA */
+-- PRIMER PROBLEMATICA 
 
-ALTER TABLE cliente /* agrego columna tipo en cliente*/
+-- agrego columna tipo en cliente
+ALTER TABLE cliente 
 ADD customer_type TEXT DEFAULT CLASSIC;
 
-/* lo seteo a gold cuando tienen mas de una cuenta o tiene una cuenta corriente*/
+-- lo seteo a gold cuando tienen mas de una cuenta o tiene una cuenta corriente
 UPDATE cliente 
 SET customer_type = 'GOLD'
 WHERE EXISTS (SELECT customer_id FROM cuenta WHERE customer_id = cliente.customer_id)
@@ -15,34 +16,42 @@ WHERE EXISTS (SELECT customer_id FROM cuenta WHERE customer_id = cliente.custome
 AND customer_id IN (SELECT customer_id FROM cuenta GROUP BY customer_id HAVING COUNT(customer_id) = 1 )
 AND EXISTS (SELECT customer_id FROM cuenta WHERE balance < 0 AND customer_id = cliente.customer_id);
 
-UPDATE cliente /* lo seteo a black cuando tienen mas de dos cuentas*/
+-- lo seteo a black cuando tienen mas de dos cuentas
+UPDATE cliente 
 SET customer_type = 'BLACK'
 WHERE EXISTS (SELECT customer_id FROM cuenta WHERE customer_id = cliente.customer_id) 
 AND customer_id IN (SELECT customer_id FROM cuenta GROUP BY customer_id HAVING COUNT(customer_id) > 2 );
 
-ALTER TABLE cuenta /* agrego columna tipo de cuenta */
+-- agrego columna tipo de cuenta 
+ALTER TABLE cuenta 
 ADD account_type TEXT DEFAULT 'Caja de ahorro en pesos';
 
-UPDATE cuenta /* la seteo como CC */
+-- la seteo como CC 
+UPDATE cuenta 
 SET account_type = 'Cuenta Corriente'
 WHERE balance < 0;
 
-UPDATE cuenta /* la seteo como dolares cuando un cliente tiene mas de una caja de ahorro y es positiva */
+-- la seteo como dolares cuando un cliente tiene mas de una caja de ahorro y es positiva 
+UPDATE cuenta 
 SET account_type = 'Caja de ahorro en dólares'
 WHERE account_id IN (SELECT account_id FROM cuenta WHERE account_type = 'Caja de ahorro en pesos' GROUP BY customer_id HAVING COUNT(customer_id) > 1 ORDER BY customer_id);
 
-ALTER TABLE cuenta /* agrego columna proveedor de tarjeta en cuenta */
+-- agrego columna proveedor de tarjeta en cuenta 
+ALTER TABLE cuenta 
 ADD card_provider TEXT DEFAULT VISA;
 
-UPDATE cuenta /* la seteo como master cuando es una cc */
+-- la seteo como master cuando es una cc 
+UPDATE cuenta 
 SET card_provider = 'MASTERCARD'
 WHERE account_type = 'Cuenta Corriente';
 
-UPDATE cuenta /* y amex cuando es dolares*/
+-- y amex cuando es dolares
+UPDATE cuenta 
 SET card_provider = 'AMERICAN EXPRESS'
 WHERE account_type = 'Caja de ahorro en dólares';
 
-CREATE TABLE tarjeta ( /* creo la tabla tarjeta con los valores estipulados*/
+-- creo la tabla tarjeta con los valores estipulados
+CREATE TABLE tarjeta ( 
 	account_id INTEGER PRIMARY KEY AUTOINCREMENT,
 	customer_id INTEGER NOT NULL DEFAULT 1,
 	card_number varchar(255) UNIQUE CHECK(length(card_number)<=20),
@@ -54,7 +63,7 @@ CREATE TABLE tarjeta ( /* creo la tabla tarjeta con los valores estipulados*/
 	FOREIGN KEY (customer_id) REFERENCES cliente (customer_id) ON UPDATE CASCADE ON DELETE CASCADE
 );
 
-/* inserto las 500 tarjetas de credito solicitadas usando ddta de (www.generatedata.com)*/
+-- inserto las 500 tarjetas de credito solicitadas usando ddta de (www.generatedata.com)
 INSERT INTO tarjeta (card_number, CVV, valid_from, expiration_date, type)
 VALUES
   ("4532 9267 9237 8641","258","2012-04-05","2025-06-22","credit"),
@@ -704,10 +713,12 @@ VALUES
   ("5536 2263 5284 6137","733","2017-04-28","2029-08-31","credit"),
   ("5538 2437 5575 1341","773","2012-08-05","2026-02-24","credit");
 
-UPDATE tarjeta /* asocio el customer_id de las tarjetas segun corresponde*/
+-- asocio el customer_id de las tarjetas segun corresponde
+UPDATE tarjeta 
 SET customer_id = (SELECT customer_id FROM cuenta WHERE account_id = tarjeta.account_id ORDER BY account_id);
 
-CREATE TABLE direccion ( /* creo la tabla direccion*/
+-- creo la tabla direccion
+CREATE TABLE direccion ( 
 	branch_id INTEGER PRIMARY KEY AUTOINCREMENT,
 	address_id INTEGER NOT NULL,
 	address TEXT NOT NULL,
@@ -716,7 +727,8 @@ CREATE TABLE direccion ( /* creo la tabla direccion*/
 	state TEXT NOT NULL,
 	country TEXT NOT NULL
 );
-/* inserto las direcciones igual que las tarjetas*/
+
+-- inserto las direcciones igual que las tarjetas
 INSERT INTO direccion (address_id, address, postal_zip, city, state, country)
 VALUES
   (1,"5241 Augue St.","3851","Vadsø","Troms og Finnmark","Norway"),
@@ -1320,8 +1332,7 @@ VALUES
   (500,"2208 Id, Ave","572481","Bhimber","Azad Kashmir","Pakistan");
 
 
-/* LINKEO DIRECCION CON CLIENTE*/
-/*creo columnas*/
+--creo columnas para linkear direccion con cliente
 ALTER TABLE cliente
 ADD COLUMN address_id INTEGER NOT NULL DEFAULT 101;
 
@@ -1331,10 +1342,11 @@ ADD COLUMN address_id INTEGER NOT NULL DEFAULT 101;
 ALTER TABLE sucursal
 ADD COLUMN address_id INTEGER NOT NULL DEFAULT 1;
 
-UPDATE sucursal /*igualo ids*/
+--igualo ids
+UPDATE sucursal 
 SET address_id = branch_id;
 
-/*view que genera numero random positivo entre numero de sucursal mas alto y numero de direccion mas alto:*/
+--view que genera numero random positivo entre numero de sucursal mas alto y numero de direccion mas alto:
 CREATE VIEW random_num AS
 SELECT(
 SELECT CAST(
@@ -1344,218 +1356,232 @@ SELECT CAST(
  FROM direccion)) AS INT ))AS 'num';
 
 
-/*SISTEMA RECURSIVO DE CREACION DE TABLA:*/
+-- SISTEMA RECURSIVO DE CREACION DE TABLA:
 
-CREATE TABLE numeros( /*creo tabla*/
+CREATE TABLE numeros( 
 	id INTEGER PRIMARY KEY,
 	n INTEGER NOT NULL
 );
 
-PRAGMA recursive_triggers = on; /*activo pragma para funcion recursive*/
+-- activo pragma para funcion recursive
+PRAGMA recursive_triggers = on; 
 
-/* creo trigger que al ejecutar un insert into inserta (la cantidad de direccion veces) un id consecutivo y un numero random en la tabla*/
+-- creo trigger que al ejecutar un insert into inserta (la cantidad de direccion veces) un id consecutivo y un numero random en la tabla
 create temp trigger ttrig BEFORE insert on numeros 
 when new.id < (SELECT max(address_id) FROM direccion) begin
 insert into numeros values (new.id + 1,(SELECT num FROM random_num));
 end;
 
-INSERT INTO numeros (id, n) /*ejecuto el insert into para activar el trigger*/
+-- ejecuto el insert into para activar el trigger
+INSERT INTO numeros (id, n) 
 VALUES (1,(SELECT num FROM random_num));
 
-/*borro las views utilizadas y desactivo el recursive*/
+-- borro las views utilizadas y desactivo el recursive
 DROP VIEW random_num;
 DROP TRIGGER ttrig;
 PRAGMA recursive_triggers = of;
 
-/* asigno numero random de direccion a clientes y empleado*/
+-- asigno numero random de direccion a clientes y empleado
 UPDATE cliente
 SET address_id = (SELECT n FROM numeros WHERE id = cliente.customer_id);
 
 UPDATE empleado
 SET address_id = (SELECT n FROM numeros WHERE id = empleado.employee_id);
 
-DROP TABLE numeros; /*borro tabla de numeros random que queda obsoleta*/
+-- borro tabla de numeros random que queda obsoleta
+DROP TABLE numeros; 
 
-/* corrijo formato de fecha */
+-- corrijo formato de fecha 
 UPDATE empleado
 set employee_hire_date = DATE(substr(employee_hire_date,7,4) ||'-' ||substr(employee_hire_date,4,2) ||'-' ||substr(employee_hire_date,1,2));
 
 
-/* SEGUNDA PROBLEMATICA */
+-- SEGUNDA PROBLEMATICA 
 
 
-/* TERCER PROBLEMATICA */
+-- TERCER PROBLEMATICA 
 
-/*PUNTO 1*/
-  SELECT balance as Cuentas_Con_Saldo_Negativo
-  from cuenta
-  where balance<0;
+--PUNTO 1
+SELECT balance as Cuentas_Con_Saldo_Negativo
+from cuenta
+where balance<0;
 
-/*PUNTO 2*/
-  SELECT customer_surname as Apellido_Cliente
-  from cliente
-  where Apellido_Cliente like "%z%";
+--PUNTO 2
+SELECT customer_surname as Apellido_Cliente
+from cliente
+where Apellido_Cliente like "%z%";
 
-/*PUNTO 3*/
-  SELECT cliente.customer_name as NombreCliente, cliente.customer_surname as Apellido, sucursal.branch_name as NombreSucursal
-  from cliente 
-  INNER JOIN sucursal on cliente.branch_id = sucursal.branch_id
-  WHERE NombreCliente like "brendan%"
-  ORDER by branch_name;
+--PUNTO 3
+SELECT cliente.customer_name as NombreCliente, cliente.customer_surname as Apellido, sucursal.branch_name as NombreSucursal
+from cliente 
+INNER JOIN sucursal on cliente.branch_id = sucursal.branch_id
+WHERE NombreCliente like "brendan%"
+ORDER by branch_name;
 
-/*PUNTO 4*/
-  SELECT loan_id, loan_type, loan_date, loan_total, customer_id
-  from prestamo
-  WHERE loan_total>8000000 and loan_type like "prendario%";
+--PUNTO 4
+SELECT loan_id, loan_type, loan_date, loan_total, customer_id
+from prestamo
+WHERE loan_total>8000000 and loan_type like "prendario%";
 
-/*PUNTO 5*/
-  SELECT loan_id, loan_type, loan_date, loan_total, customer_id 
-  FROM prestamo
-  WHERE loan_total> (SELECT avg(loan_total) FROM prestamo);
+--PUNTO 5
+SELECT loan_id, loan_type, loan_date, loan_total, customer_id 
+FROM prestamo
+WHERE loan_total> (SELECT avg(loan_total) FROM prestamo);
 
-/*PUNTO 6*/
+--PUNTO 6
 
-/*PUNTO 7*/
-  SELECT account_id, customer_id, balance, iban
-  FROM cuenta 
-  WHERE balance > 800000 
-  ORDER BY account_id 
-  LIMIT 5;
+--PUNTO 7
+SELECT account_id, customer_id, balance, iban
+FROM cuenta 
+WHERE balance > 800000 
+ORDER BY account_id 
+LIMIT 5;
 
-/*PUNTO 8*/
-  SELECT strftime('%d-%m-%Y', loan_date) as date, loan_total
-  FROM prestamo
-  where strftime('%m', loan_date) in ('04','06','08')
-  order by loan_total DESC;
+--PUNTO 8
+SELECT strftime('%d-%m-%Y', loan_date) as date, loan_total
+FROM prestamo
+where strftime('%m', loan_date) in ('04','06','08')
+order by loan_total DESC;
 
-/*PUNTO 9*/
-  select  loan_type, sum(loan_total) as loan_total_accu
-  from prestamo
-  group by loan_type;
+--PUNTO 9
+select  loan_type, sum(loan_total) as loan_total_accu
+from prestamo
+group by loan_type;
 
 
-/* CUARTA PROBLEMATICA */
+-- CUARTA PROBLEMATICA 
 
-/*PUNTO 1 (devuelve la cantidad de clientes por nombre de sucursal ordenando de mayor a menor)*/
-  SELECT count(cliente.customer_id) as Cantidad_Clientes, sucursal.branch_name
+--PUNTO 1 (devuelve la cantidad de clientes por nombre de sucursal ordenando de mayor a menor)
+SELECT count(cliente.customer_id) as Cantidad_Clientes, sucursal.branch_name
+FROM cliente 
+INNER JOIN sucursal on cliente.branch_id = sucursal.branch_id
+GROUP BY sucursal.branch_id
+ORDER BY Cantidad_Clientes DESC;
+
+--PUNTO 2 (anexa a la tabla sucursal una columna con la cantidad de empleados por cliente de cada sucursal)
+-- creo view para unir data de tablas 
+CREATE VIEW c_cl AS 
+  SELECT sucursal.branch_id, sucursal.branch_name,count(cliente.customer_id) as Cantidad_Clientes
   FROM cliente 
   INNER JOIN sucursal on cliente.branch_id = sucursal.branch_id
   GROUP BY sucursal.branch_id
-  ORDER BY Cantidad_Clientes DESC;
+  ORDER BY sucursal.branch_id;
 
-/*PUNTO 2 (anexa a la tabla sucursal una columna con la cantidad de empleados por cliente de cada sucursal)*/
-  CREATE VIEW c_cl AS /* creo views para unir data de tablas */
-    SELECT sucursal.branch_id, sucursal.branch_name,count(cliente.customer_id) as Cantidad_Clientes
-    FROM cliente 
-    INNER JOIN sucursal on cliente.branch_id = sucursal.branch_id
-    GROUP BY sucursal.branch_id
-    ORDER BY sucursal.branch_id;
-
-  CREATE VIEW c_emp_x_cl AS
+CREATE VIEW c_emp_x_cl AS
   SELECT c_cl.branch_id, branch_name, round((Cantidad_Clientes*1.0)/(count(empleado.employee_id)),2) as Cant_Empleados_por_cliente
   FROM c_cl
   INNER JOIN empleado ON empleado.branch_id = c_cl.branch_id
   GROUP BY c_cl.branch_id
   ORDER BY c_cl.branch_id;
 
-  ALTER TABLE sucursal /* creo columna */
-  ADD COLUMN employee_amnt_per_client REAL NOT NULL DEFAULT 0.0;
+-- creo columna 
+ALTER TABLE sucursal 
+ADD COLUMN employee_amnt_per_client REAL NOT NULL DEFAULT 0.0;
 
-  UPDATE sucursal /* la actualizo con los valores obtenidos en las views */ 
-  SET employee_amnt_per_client = (SELECT Cant_Empleados_por_cliente FROM c_emp_x_cl WHERE branch_id = sucursal.branch_id)
-  WHERE branch_id IN(SELECT branch_id FROM c_emp_x_cl);
+-- la actualizo con los valores obtenidos en las views  
+UPDATE sucursal 
+SET employee_amnt_per_client = (SELECT Cant_Empleados_por_cliente FROM c_emp_x_cl WHERE branch_id = sucursal.branch_id)
+WHERE branch_id IN(SELECT branch_id FROM c_emp_x_cl);
 
-  /*borro las views utilizadas*/
-  DROP VIEW c_cl;
-  DROP VIEW c_emp_x_cl;
+-- borro las views utilizadas
+DROP VIEW c_cl;
+DROP VIEW c_emp_x_cl;
 
 
-/*PUNTO 3 (anexa a la tabla sucursal dos columnas con la cantidad de tarjetas de cada tipo emitidas por sucursal)*/
-  CREATE VIEW c_t_credit_x_s AS /* creo views para unir data de tablas */
-    SELECT count(account_id) as Cantidad_Tarjetas, type, cliente.branch_id
-    FROM tarjeta
-    INNER JOIN cliente ON cliente.customer_id = tarjeta.customer_id
-    GROUP BY cliente.branch_id
-    HAVING tarjeta.type = 'credit'
-    ORDER by cliente.branch_id;
+--PUNTO 3 (anexa a la tabla sucursal dos columnas con la cantidad de tarjetas de cada tipo emitidas por sucursal)
+-- creo views para unir data de tablas 
+CREATE VIEW c_t_credit_x_s AS 
+  SELECT count(account_id) as Cantidad_Tarjetas, type, cliente.branch_id
+  FROM tarjeta
+  INNER JOIN cliente ON cliente.customer_id = tarjeta.customer_id
+  GROUP BY cliente.branch_id
+  HAVING tarjeta.type = 'credit'
+  ORDER by cliente.branch_id;
 
-  CREATE VIEW c_t_dedit_x_s AS  
-    SELECT count(account_id) as Cantidad_Tarjetas, type, cliente.branch_id
-    FROM tarjeta
-    INNER JOIN cliente ON cliente.customer_id = tarjeta.customer_id
-    GROUP BY cliente.branch_id
-    HAVING tarjeta.type = 'debit'
-    ORDER by cliente.branch_id;
+CREATE VIEW c_t_dedit_x_s AS  
+  SELECT count(account_id) as Cantidad_Tarjetas, type, cliente.branch_id
+  FROM tarjeta
+  INNER JOIN cliente ON cliente.customer_id = tarjeta.customer_id
+  GROUP BY cliente.branch_id
+  HAVING tarjeta.type = 'debit'
+  ORDER by cliente.branch_id;
     
-  ALTER TABLE sucursal /* creo columnas */
-  ADD COLUMN given_credit_cards INTEGER NOT NULL DEFAULT 0;
+-- creo columnas
+ALTER TABLE sucursal 
+ADD COLUMN given_credit_cards INTEGER NOT NULL DEFAULT 0;
 
-  ALTER TABLE sucursal
-  ADD COLUMN given_dedit_cards INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE sucursal
+ADD COLUMN given_dedit_cards INTEGER NOT NULL DEFAULT 0;
 
-  UPDATE sucursal /* las actualizo con los valores obtenidos en las views */
-  SET given_credit_cards = (SELECT Cantidad_Tarjetas FROM c_t_credit_x_s WHERE branch_id = sucursal.branch_id)
-  WHERE branch_id IN(SELECT branch_id FROM c_t_credit_x_s);
+-- las actualizo con los valores obtenidos en las views
+UPDATE sucursal 
+SET given_credit_cards = (SELECT Cantidad_Tarjetas FROM c_t_credit_x_s WHERE branch_id = sucursal.branch_id)
+WHERE branch_id IN(SELECT branch_id FROM c_t_credit_x_s);
 
-  UPDATE sucursal
-  SET given_dedit_cards = (SELECT Cantidad_Tarjetas FROM c_t_dedit_x_s WHERE branch_id = sucursal.branch_id)
-  WHERE branch_id IN(SELECT branch_id FROM c_t_dedit_x_s);
+UPDATE sucursal
+SET given_dedit_cards = (SELECT Cantidad_Tarjetas FROM c_t_dedit_x_s WHERE branch_id = sucursal.branch_id)
+WHERE branch_id IN(SELECT branch_id FROM c_t_dedit_x_s);
 
-  /*borro las views utilizadas*/
-  DROP VIEW c_t_credit_x_s;
-  DROP VIEW c_t_dedit_x_s;
+-- borro las views utilizadas
+DROP VIEW c_t_credit_x_s;
+DROP VIEW c_t_dedit_x_s;
 
 
-/*PUNTO 4 (anexa a la tabla sucursal una columna con la cantidad de prestamos emitidos por sucursal)*/
-  CREATE VIEW esquema_prestamos AS /* creo views para unir data de tablas */
-  SELECT branch_id, CLIENTE.customer_id, prestamo.loan_id FROM CLIENTE
-  LEFT JOIN prestamo
-  ON cliente.customer_id = prestamo.customer_id
-  order by branch_id;
+--PUNTO 4 (anexa a la tabla sucursal una columna con la cantidad de prestamos emitidos por sucursal)
+-- creo views para unir data de tablas 
+CREATE VIEW esquema_prestamos AS 
+SELECT branch_id, CLIENTE.customer_id, prestamo.loan_id FROM CLIENTE
+LEFT JOIN prestamo
+ON cliente.customer_id = prestamo.customer_id
+order by branch_id;
 
-  CREATE VIEW diagrama_prestamos AS
-  SELECT esquema_prestamos.branch_id, count(loan_id) AS cant_prestamos, count(cliente.customer_id) AS cant_clientes
-  from esquema_prestamos 
-  INNER JOIN cliente on esquema_prestamos.branch_id = cliente.branch_id
-  group by esquema_prestamos.branch_id;
+CREATE VIEW diagrama_prestamos AS
+SELECT esquema_prestamos.branch_id, count(loan_id) AS cant_prestamos, count(cliente.customer_id) AS cant_clientes
+from esquema_prestamos 
+INNER JOIN cliente on esquema_prestamos.branch_id = cliente.branch_id
+group by esquema_prestamos.branch_id;
 
-  CREATE VIEW diagrama_promedio AS
-  SELECT branch_id, CAST(round((((cant_prestamos*1.0)/cant_clientes)*100),1)as TEXT) || '%' as promedio from diagrama_prestamos;
+CREATE VIEW diagrama_promedio AS
+SELECT branch_id, CAST(round((((cant_prestamos*1.0)/cant_clientes)*100),1)as TEXT) || '%' as promedio from diagrama_prestamos;
 
-  ALTER TABLE sucursal /* creo columna */
-  ADD COLUMN average_given_loans TEXT NOT NULL DEFAULT '0%';
+-- creo columna 
+ALTER TABLE sucursal 
+ADD COLUMN average_given_loans TEXT NOT NULL DEFAULT '0%';
 
-  UPDATE sucursal /* la actualizo con los valores obtenidos en las views */
-  SET average_given_loans = (SELECT promedio FROM diagrama_promedio WHERE branch_id = sucursal.branch_id)
-  WHERE branch_id IN(SELECT branch_id FROM diagrama_promedio);
+-- la actualizo con los valores obtenidos en las views 
+UPDATE sucursal 
+SET average_given_loans = (SELECT promedio FROM diagrama_promedio WHERE branch_id = sucursal.branch_id)
+WHERE branch_id IN(SELECT branch_id FROM diagrama_promedio);
 
-  /*borro las views utilizadas*/
-  DROP VIEW diagrama_prestamos;
-  DROP VIEW diagrama_promedio;
-  DROP VIEW esquema_prestamos;
+--borro las views utilizadas
+DROP VIEW diagrama_prestamos;
+DROP VIEW diagrama_promedio;
+DROP VIEW esquema_prestamos;
 
-/*PUNTO 5 (crea tabla auditoria y trigger que al activarse registrara en la tabla los movimientos)*/
-  CREATE TABLE auditoria_cuenta ( /*creo tabla */
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    old_id INT,
-    new_id INT, 
-    old_balance INT, 
-    new_balance INT, 
-    old_iban TEXT, 
-    new_iban TEXT, 
-    old_type TEXT, 
-    new_type TEXT, 
-    user_action TEXT, 
-    created_at TEXT
-  );
+--PUNTO 5 (crea tabla auditoria y trigger que al activarse registrara en la tabla los movimientos)
+CREATE TABLE auditoria_cuenta ( 
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  old_id INT,
+  new_id INT, 
+  old_balance INT, 
+  new_balance INT, 
+  old_iban TEXT, 
+  new_iban TEXT, 
+  old_type TEXT, 
+  new_type TEXT, 
+  user_action TEXT, 
+  created_at TEXT
+);
 
-  CREATE TRIGGER registro_movimientos_cuenta AFTER UPDATE ON cuenta /*creo trigger con los parametros de activacion y las acciones a realizar*/
-  WHEN old.balance<>new.balance OR old.iban<>new.iban OR old.account_type<>new.account_type
-  BEGIN
-    INSERT INTO auditoria_cuenta (old_id,new_id,old_balance,new_balance, old_iban, new_iban, old_type, new_type, user_action, created_at)
-    VALUES (old.account_id, new.account_id, old.balance, new.balance, old.iban, new.iban, old.account_type, new.account_type, 'UPDATE', datetime('NOW'));
-  END;
+--creo trigger con los parametros de activacion y las acciones a realizar
+CREATE TRIGGER registro_movimientos_cuenta AFTER UPDATE ON cuenta 
+WHEN old.balance<>new.balance OR old.iban<>new.iban OR old.account_type<>new.account_type
+BEGIN
+  INSERT INTO auditoria_cuenta (old_id,new_id,old_balance,new_balance, old_iban, new_iban, old_type, new_type, user_action, created_at)
+  VALUES (old.account_id, new.account_id, old.balance, new.balance, old.iban, new.iban, old.account_type, new.account_type, 'UPDATE', datetime('NOW'));
+END;
 
-  UPDATE cuenta /* hago el update de cuentas que quedara registrado en la tabla auditoria*/
-  SET balance = balance - 10000
-  WHERE account_id IN (10,11,12,13,14);
+-- hago el update de cuentas que quedara registrado en la tabla auditoria
+UPDATE cuenta 
+SET balance = balance - 10000
+WHERE account_id IN (10,11,12,13,14);
