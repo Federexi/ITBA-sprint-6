@@ -1383,9 +1383,83 @@ set employee_hire_date = DATE(substr(employee_hire_date,7,4) ||'-' ||substr(empl
 
 
 /* TERCER PROBLEMATICA */
+--PUNTO 1
+  SELECT balance as Cuentas_Con_Saldo_Negativo
+  from cuenta
+  where balance<0
+
+  --PUNTO 2
+  SELECT customer_surname as Apellido_Cliente
+  from cliente
+  where Apellido_Cliente like "%z%"
+
+  --PUNTO 3
+  SELECT cliente.customer_name as NombreCliente, cliente.customer_surname as Apellido, sucursal.branch_name as NombreSucursal
+  from cliente 
+  INNER JOIN sucursal on cliente.branch_id = sucursal.branch_id
+  WHERE NombreCliente like "brendan%"
+  ORDER by branch_name
+
+  --PUNTO 4
+  SELECT *
+  from prestamo
+  WHERE loan_total>8000000 and loan_type like "prendario%"
+
+  --PUNTO 5
+  SELECT avg(loan_total)
+  FROM prestamo
+
+  SELECT * 
+  FROM prestamo
+  WHERE loan_total> 47414308.36
+
+  --PUNTO 6
+
+
+
+  --PUNTO 7
+  SELECT  * 
+  FROM CUENTA
+  WHERE balance>8000 
+  ORDER BY balance ASC LIMIT 5
+
+  --PUNTO 8
+
+  SELECT strftime('%d-%m-%Y', loan_date) as date, loan_total
+  FROM prestamo
+  where strftime('%m', loan_date) in ('04','06','08')
+  order by loan_total DESC
+
+  --PUNTO 9
+  select  loan_type, sum(loan_total) as loan_total_accu
+  from prestamo
+  group by loan_type
 
 
 /* CUARTA PROBLEMATICA */
+
+-PUNTO 1 
+
+  SELECT count(cliente.customer_id) as Cantidad_Clientes, sucursal.branch_name
+  FROM cliente 
+  INNER JOIN sucursal on cliente.branch_id = sucursal.branch_id
+  GROUP BY branch_name
+  ORDER BY Cantidad_Clientes DESC
+
+  --PUNTO 2
+
+  SELECT count(empleado.branch_id) as Cantidad_Empleados,cliente.customer_name, branch_name
+  from sucursal
+  inner join cliente on sucursal.branch_id=cliente.branch_id
+  inner join empleado on sucursal.branch_id=empleado.branch_id
+  GROUP by branch_name
+
+  --PUNTO 3
+
+  SELECT count(tarjeta.account_id) as Cantidad_Tarjetas, tarjeta.type, branch_name
+  from sucursal
+  inner join tarjeta on sucursal.branch_id=tarjeta.account_id
+  GROUP by branch_name
 
 
 /* PUNTO 4*/
