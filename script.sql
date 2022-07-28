@@ -1383,134 +1383,133 @@ set employee_hire_date = DATE(substr(employee_hire_date,7,4) ||'-' ||substr(empl
 
 
 /* TERCER PROBLEMATICA */
+
 --PUNTO 1
   SELECT balance as Cuentas_Con_Saldo_Negativo
   from cuenta
-  where balance<0
+  where balance<0;
 
-  --PUNTO 2
+--PUNTO 2
   SELECT customer_surname as Apellido_Cliente
   from cliente
-  where Apellido_Cliente like "%z%"
+  where Apellido_Cliente like "%z%";
 
-  --PUNTO 3
+--PUNTO 3
   SELECT cliente.customer_name as NombreCliente, cliente.customer_surname as Apellido, sucursal.branch_name as NombreSucursal
   from cliente 
   INNER JOIN sucursal on cliente.branch_id = sucursal.branch_id
   WHERE NombreCliente like "brendan%"
-  ORDER by branch_name
+  ORDER by branch_name;
 
-  --PUNTO 4
+--PUNTO 4
   SELECT *
   from prestamo
-  WHERE loan_total>8000000 and loan_type like "prendario%"
+  WHERE loan_total>8000000 and loan_type like "prendario%";
 
-  --PUNTO 5
-  SELECT avg(loan_total)
-  FROM prestamo
-
+--PUNTO 5
   SELECT * 
   FROM prestamo
-  WHERE loan_total> 47414308.36
+  WHERE loan_total> (SELECT avg(loan_total) FROM prestamo);
 
-  --PUNTO 6
+/*PUNTO 6*/
 
+--PUNTO 7
+  SELECT account_id, customer_id, balance, iban
+  FROM cuenta 
+  WHERE balance > 800000 
+  ORDER BY account_id 
+  LIMIT 5;
 
-
-  --PUNTO 7
-  SELECT  * 
-  FROM CUENTA
-  WHERE balance>8000 
-  ORDER BY balance ASC LIMIT 5
-
-  --PUNTO 8
+--PUNTO 8
 
   SELECT strftime('%d-%m-%Y', loan_date) as date, loan_total
   FROM prestamo
   where strftime('%m', loan_date) in ('04','06','08')
-  order by loan_total DESC
+  order by loan_total DESC;
 
-  --PUNTO 9
+--PUNTO 9
   select  loan_type, sum(loan_total) as loan_total_accu
   from prestamo
-  group by loan_type
+  group by loan_type;
 
 
 /* CUARTA PROBLEMATICA */
 
--PUNTO 1 
+--PUNTO 1 
 
   SELECT count(cliente.customer_id) as Cantidad_Clientes, sucursal.branch_name
   FROM cliente 
   INNER JOIN sucursal on cliente.branch_id = sucursal.branch_id
   GROUP BY branch_name
-  ORDER BY Cantidad_Clientes DESC
+  ORDER BY Cantidad_Clientes DESC;
 
-  --PUNTO 2
+--PUNTO 2
 
   SELECT count(empleado.branch_id) as Cantidad_Empleados,cliente.customer_name, branch_name
   from sucursal
   inner join cliente on sucursal.branch_id=cliente.branch_id
   inner join empleado on sucursal.branch_id=empleado.branch_id
-  GROUP by branch_name
+  GROUP by branch_name;
 
-  --PUNTO 3
+--PUNTO 3
 
   SELECT count(tarjeta.account_id) as Cantidad_Tarjetas, tarjeta.type, branch_name
   from sucursal
   inner join tarjeta on sucursal.branch_id=tarjeta.account_id
-  GROUP by branch_name
+  GROUP by branch_name;
 
 
-/* PUNTO 4*/
-CREATE VIEW esquema_prestamos AS
-SELECT branch_id, CLIENTE.customer_id, prestamo.loan_id FROM CLIENTE
-LEFT JOIN prestamo
-ON cliente.customer_id = prestamo.customer_id
-order by branch_id;
+--PUNTO 4
 
-CREATE VIEW diagrama_prestamos AS
-SELECT esquema_prestamos.branch_id, count(loan_id) AS cant_prestamos, count(cliente.customer_id) AS cant_clientes
-from esquema_prestamos 
-INNER JOIN cliente on esquema_prestamos.branch_id = cliente.branch_id
-group by esquema_prestamos.branch_id;
+  CREATE VIEW esquema_prestamos AS
+  SELECT branch_id, CLIENTE.customer_id, prestamo.loan_id FROM CLIENTE
+  LEFT JOIN prestamo
+  ON cliente.customer_id = prestamo.customer_id
+  order by branch_id;
 
-CREATE VIEW diagrama_promedio AS
-SELECT branch_id, CAST(round((((cant_prestamos*1.0)/cant_clientes)*100),1)as TEXT) || '%' as promedio from diagrama_prestamos;
+  CREATE VIEW diagrama_prestamos AS
+  SELECT esquema_prestamos.branch_id, count(loan_id) AS cant_prestamos, count(cliente.customer_id) AS cant_clientes
+  from esquema_prestamos 
+  INNER JOIN cliente on esquema_prestamos.branch_id = cliente.branch_id
+  group by esquema_prestamos.branch_id;
 
-ALTER TABLE sucursal
-ADD COLUMN average_given_loans TEXT NOT NULL DEFAULT '0%';
+  CREATE VIEW diagrama_promedio AS
+  SELECT branch_id, CAST(round((((cant_prestamos*1.0)/cant_clientes)*100),1)as TEXT) || '%' as promedio from diagrama_prestamos;
 
-UPDATE sucursal
-SET average_given_loans = (SELECT promedio FROM diagrama_promedio WHERE branch_id = sucursal.branch_id)
-WHERE branch_id IN(SELECT branch_id FROM diagrama_promedio);
+  ALTER TABLE sucursal
+  ADD COLUMN average_given_loans TEXT NOT NULL DEFAULT '0%';
 
-DROP VIEW diagrama_prestamos;
-DROP VIEW diagrama_promedio;
-DROP VIEW esquema_prestamos;
+  UPDATE sucursal
+  SET average_given_loans = (SELECT promedio FROM diagrama_promedio WHERE branch_id = sucursal.branch_id)
+  WHERE branch_id IN(SELECT branch_id FROM diagrama_promedio);
 
-/* PUNTO 5*/
-CREATE TABLE auditoria_cuenta (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	old_id INT,
-	new_id INT, 
-	old_balance INT, 
-	new_balance INT, 
-	old_iban TEXT, 
-	new_iban TEXT, 
-	old_type TEXT, 
-	new_type TEXT, 
-	user_action TEXT, 
-	created_at TEXT
-);
+  DROP VIEW diagrama_prestamos;
+  DROP VIEW diagrama_promedio;
+  DROP VIEW esquema_prestamos;
 
-CREATE TRIGGER registro_movimientos_cuenta AFTER UPDATE ON cuenta
-WHEN old.balance<>new.balance OR old.iban<>new.iban OR old.account_type<>new.account_type
-BEGIN
-	INSERT INTO auditoria_cuenta (old_id,new_id,old_balance,new_balance, old_iban, new_iban, old_type, new_type, user_action, created_at)
-	VALUES (old.account_id, new.account_id, old.balance, new.balance, old.iban, new.iban, old.account_type, new.account_type, 'UPDATE', datetime('NOW'));
-END;
+--PUNTO 5
 
-UPDATE cuenta
-SET balance = balance - 10000
-WHERE account_id IN (10,11,12,13,14);
+  CREATE TABLE auditoria_cuenta (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    old_id INT,
+    new_id INT, 
+    old_balance INT, 
+    new_balance INT, 
+    old_iban TEXT, 
+    new_iban TEXT, 
+    old_type TEXT, 
+    new_type TEXT, 
+    user_action TEXT, 
+    created_at TEXT
+  );
+
+  CREATE TRIGGER registro_movimientos_cuenta AFTER UPDATE ON cuenta
+  WHEN old.balance<>new.balance OR old.iban<>new.iban OR old.account_type<>new.account_type
+  BEGIN
+    INSERT INTO auditoria_cuenta (old_id,new_id,old_balance,new_balance, old_iban, new_iban, old_type, new_type, user_action, created_at)
+    VALUES (old.account_id, new.account_id, old.balance, new.balance, old.iban, new.iban, old.account_type, new.account_type, 'UPDATE', datetime('NOW'));
+  END;
+
+  UPDATE cuenta
+  SET balance = balance - 10000
+  WHERE account_id IN (10,11,12,13,14);
