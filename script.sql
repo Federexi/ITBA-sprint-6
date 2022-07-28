@@ -1398,6 +1398,51 @@ set employee_hire_date = DATE(substr(employee_hire_date,7,4) ||'-' ||substr(empl
 
 -- SEGUNDA PROBLEMATICA 
 
+--Creo vista con columna id, sucursal, nombre, apellido, dni y edad calculada por fecha de nacimiento de la tabla cliente 
+
+create view cliente_edad as 
+select customer_id, branch_id, customer_name, customer_surname, customer_DNI, cast(strftime('%Y.%m%d', 'now') - strftime('%Y.%m%d', dob) as int) as customer_age
+from cliente
+
+--Mostrar columnas de la vista cliente_edad, ordenadas por dni de menor a mayor y cuya edad sea mayor a 40
+
+select *
+from cliente_edad
+where customer_age > 40
+order by customer_DNI ASC
+
+--Mostrar los clientes que se llamen Anne o Tyler ordenados por edad de menor a mayor
+
+select *
+from cliente_edad
+where customer_name = "Anne" or customer_name = "Tyler"
+order by customer_age ASC
+
+--Insertar 5 nuevos clientes en la base de datos según el JSON provisto 
+
+insert into cliente(customer_name, customer_surname, customer_DNI, branch_id, dob)
+values 
+("Lois", "Stout", "47730534", 80, "1984-07-07"),
+("Hall", "Mcconnell", "52055464", 45, "1968-04-30"),
+("Hilel", "Mclean", "43625213", 77, "1993-03-28"),
+("Jin", "Cooley", "21207908", 96, "1959-08-24"),
+("Gabriel", "Harmon", "57063950", 27, "1976-04-01")
+
+--Actualizar los 5 nuevos clientes agregados cambiando su branch id
+
+update cliente
+set branch_id = 10
+where customer_id > 500
+
+--Borrar cliente Noel David
+
+delete from cliente 
+where customer_name = "Noel" and customer_surname = "David"
+
+--Tipo de préstamo de mayor importe 
+
+select loan_id, loan_type, loan_date, max(loan_total), customer_id
+from prestamo
 
 -- TERCER PROBLEMATICA 
 
