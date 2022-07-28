@@ -1402,12 +1402,12 @@ set employee_hire_date = DATE(substr(employee_hire_date,7,4) ||'-' ||substr(empl
   ORDER by branch_name;
 
 --PUNTO 4
-  SELECT *
+  SELECT loan_id, loan_type, loan_date, loan_total, customer_id
   from prestamo
   WHERE loan_total>8000000 and loan_type like "prendario%";
 
 --PUNTO 5
-  SELECT * 
+  SELECT loan_id, loan_type, loan_date, loan_total, customer_id 
   FROM prestamo
   WHERE loan_total> (SELECT avg(loan_total) FROM prestamo);
 
@@ -1421,7 +1421,6 @@ set employee_hire_date = DATE(substr(employee_hire_date,7,4) ||'-' ||substr(empl
   LIMIT 5;
 
 --PUNTO 8
-
   SELECT strftime('%d-%m-%Y', loan_date) as date, loan_total
   FROM prestamo
   where strftime('%m', loan_date) in ('04','06','08')
@@ -1436,7 +1435,6 @@ set employee_hire_date = DATE(substr(employee_hire_date,7,4) ||'-' ||substr(empl
 /* CUARTA PROBLEMATICA */
 
 --PUNTO 1 
-
   SELECT count(cliente.customer_id) as Cantidad_Clientes, sucursal.branch_name
   FROM cliente 
   INNER JOIN sucursal on cliente.branch_id = sucursal.branch_id
@@ -1444,7 +1442,6 @@ set employee_hire_date = DATE(substr(employee_hire_date,7,4) ||'-' ||substr(empl
   ORDER BY Cantidad_Clientes DESC;
 
 --PUNTO 2
-
   CREATE VIEW c_cl AS
     SELECT sucursal.branch_id, sucursal.branch_name,count(cliente.customer_id) as Cantidad_Clientes
     FROM cliente 
@@ -1471,7 +1468,6 @@ set employee_hire_date = DATE(substr(employee_hire_date,7,4) ||'-' ||substr(empl
 
 
 --PUNTO 3
-
   CREATE VIEW c_t_credit_x_s AS
     SELECT count(account_id) as Cantidad_Tarjetas, type, cliente.branch_id
     FROM tarjeta
@@ -1507,7 +1503,6 @@ set employee_hire_date = DATE(substr(employee_hire_date,7,4) ||'-' ||substr(empl
 
 
 --PUNTO 4
-
   CREATE VIEW esquema_prestamos AS
   SELECT branch_id, CLIENTE.customer_id, prestamo.loan_id FROM CLIENTE
   LEFT JOIN prestamo
@@ -1535,7 +1530,6 @@ set employee_hire_date = DATE(substr(employee_hire_date,7,4) ||'-' ||substr(empl
   DROP VIEW esquema_prestamos;
 
 --PUNTO 5
-
   CREATE TABLE auditoria_cuenta (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     old_id INT,
