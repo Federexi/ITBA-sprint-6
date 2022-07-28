@@ -1399,52 +1399,46 @@ set employee_hire_date = DATE(substr(employee_hire_date,7,4) ||'-' ||substr(empl
 -- SEGUNDA PROBLEMATICA 
 
 --Creo vista con columna id, sucursal, nombre, apellido, dni y edad calculada por fecha de nacimiento de la tabla cliente 
-
 create view cliente_edad as 
 select customer_id, branch_id, customer_name, customer_surname, customer_DNI, cast(strftime('%Y.%m%d', 'now') - strftime('%Y.%m%d', dob) as int) as customer_age
-from cliente
+from cliente;
 
 --Mostrar columnas de la vista cliente_edad, ordenadas por dni de menor a mayor y cuya edad sea mayor a 40
-
-select *
+select customer_id, branch_id, customer_name, customer_surname, customer_DNI,customer_age
 from cliente_edad
 where customer_age > 40
-order by customer_DNI ASC
+order by customer_DNI ASC;
 
 --Mostrar los clientes que se llamen Anne o Tyler ordenados por edad de menor a mayor
-
-select *
+select customer_id, branch_id, customer_name, customer_surname, customer_DNI,customer_age
 from cliente_edad
 where customer_name = "Anne" or customer_name = "Tyler"
-order by customer_age ASC
+order by customer_age ASC;
 
 --Insertar 5 nuevos clientes en la base de datos según el JSON provisto 
-
 insert into cliente(customer_name, customer_surname, customer_DNI, branch_id, dob)
 values 
 ("Lois", "Stout", "47730534", 80, "1984-07-07"),
 ("Hall", "Mcconnell", "52055464", 45, "1968-04-30"),
 ("Hilel", "Mclean", "43625213", 77, "1993-03-28"),
 ("Jin", "Cooley", "21207908", 96, "1959-08-24"),
-("Gabriel", "Harmon", "57063950", 27, "1976-04-01")
+("Gabriel", "Harmon", "57063950", 27, "1976-04-01");
 
 --Actualizar los 5 nuevos clientes agregados cambiando su branch id
-
 update cliente
 set branch_id = 10
-where customer_id > 500
+where customer_DNI in ("47730534", "52055464", "43625213", "21207908", "57063950");
 
 --Borrar cliente Noel David
-
 delete from cliente 
-where customer_name = "Noel" and customer_surname = "David"
+where customer_name = "Noel" and customer_surname = "David";
 
 --Tipo de préstamo de mayor importe 
-
 select loan_id, loan_type, loan_date, max(loan_total), customer_id
-from prestamo
+from prestamo;
 
 -- TERCER PROBLEMATICA 
+
 --PUNTO 1 (selecciona las cuentas con saldo negativo)
 SELECT balance as Cuentas_Con_Saldo_Negativo
 from cuenta
@@ -1454,7 +1448,7 @@ where balance<0;
 SELECT cliente.customer_name, cliente.customer_surname as Apellido_Cliente, customer_age as Edad_Cliente
 from cliente_edad
 INNER JOIN cliente on cliente_edad.customer_id = cliente.customer_id
-WHERE Apellido_Cliente like "%z%"
+WHERE Apellido_Cliente like "%z%";
 
 --PUNTO 3 (Seleccionar el nombre, apellido, edad y nombre de sucursal de las personas cuyo nombre sea “Brendan” y el resultado ordenarlo por nombre de sucursal)
 SELECT customer_name as Nombre_Cliente,customer_surname as Apellido_Cliente, customer_age as Edad_Cliente, sucursal.branch_name as Nombre_Sucursal
@@ -1462,7 +1456,6 @@ from cliente_edad
 INNER JOIN sucursal on cliente_edad.branch_id = sucursal.branch_id
 WHERE Nombre_Cliente like "brendan%"
 ORDER by branch_name;
-
 
 --PUNTO 4 (Selecciona de la tabla de préstamos, los préstamos con un importe mayor a $80.000 y los préstamos prendarios)
 SELECT loan_id, loan_type, loan_date, loan_total, customer_id
@@ -1475,7 +1468,7 @@ FROM prestamo
 WHERE loan_total> (SELECT avg(loan_total) FROM prestamo);
 
 --PUNTO 6  ( Cuenta la cantidad de clientes menores a 50 años)
-SELECT count(customer_id ) as ClienteMenor50
+SELECT count(customer_id) as ClienteMenor50
 from cliente_edad 
 where customer_age<50;
 
@@ -1496,7 +1489,6 @@ order by loan_total DESC;
 select  loan_type, sum(loan_total) as loan_total_accu
 from prestamo
 group by loan_type;
-
 
 -- CUARTA PROBLEMATICA 
 
@@ -1535,7 +1527,6 @@ WHERE branch_id IN(SELECT branch_id FROM c_emp_x_cl);
 -- borro las views utilizadas
 DROP VIEW c_cl;
 DROP VIEW c_emp_x_cl;
-
 
 --PUNTO 3 (anexa a la tabla sucursal dos columnas con la cantidad de tarjetas de cada tipo emitidas por sucursal)
 -- creo views para unir data de tablas 
@@ -1630,16 +1621,24 @@ BEGIN
   VALUES (old.account_id, new.account_id, old.balance, new.balance, old.iban, new.iban, old.account_type, new.account_type, 'UPDATE', datetime('NOW'));
 END;
 
--- hago el update de cuentas que quedara registrado en la tabla auditoria
+--hago el update de cuentas que quedara registrado en la tabla auditoria
 UPDATE cuenta 
 SET balance = balance - 10000
 WHERE account_id IN (10,11,12,13,14);
 
---Crear índice para DNI en la tabla Cliente
-create unique index index_dni on cliente (customer_DNI)
+--PUNTO 6 (Crear índice para DNI en la tabla Cliente)
+create unique index index_dni on cliente (customer_DNI);
 
---Crear tabla movimientos, hacer una transferencia y registrarlo en la tabla movimientos
+--PUNTO 7 (Crear tabla movimientos, hacer una transferencia y registrarlo en la tabla movimientos)
+CREATE TABLE movimientos (
+  movement_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  no_account INTEGER NOT NULL,
+  amount INTEGER NOT NULL,
+  type_operation TEXT NOT NULL,
+  hour DATE NOT NULL
+);
 
+COMMIT;
 begin TRANSACTION;
 
 update cuenta
@@ -1651,7 +1650,7 @@ set balance = balance + 1000
 where account_id = 400;
 
 insert into movimientos(no_account, amount, type_operation, hour)
-values(200, 1000, "Transfer", time("now"));
+values(200, -1000, "Transfer", time("now"));
 
 insert into movimientos(no_account, amount, type_operation, hour)
 values(400, 1000, "Transfer", time("now"));
