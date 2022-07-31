@@ -1395,7 +1395,6 @@ DROP TABLE numeros;
 UPDATE empleado
 set employee_hire_date = DATE(substr(employee_hire_date,7,4) ||'-' ||substr(employee_hire_date,4,2) ||'-' ||substr(employee_hire_date,1,2));
 
-
 -- SEGUNDA PROBLEMATICA 
 
 --Creo vista con columna id, sucursal, nombre, apellido, dni y edad calculada por fecha de nacimiento de la tabla cliente 
@@ -1434,13 +1433,15 @@ delete from cliente
 where customer_name = "Noel" and customer_surname = "David";
 
 --Tipo de préstamo de mayor importe 
-select loan_id, loan_type, loan_date, max(loan_total), customer_id
-from prestamo;
+select loan_type
+from prestamo
+order by loan_total DESC
+limit 1;
 
 -- TERCER PROBLEMATICA 
 
 --PUNTO 1 (selecciona las cuentas con saldo negativo)
-SELECT balance as Cuentas_Con_Saldo_Negativo
+SELECT *
 from cuenta
 where balance<0;
 
@@ -1454,13 +1455,17 @@ WHERE Apellido_Cliente like "%z%";
 SELECT customer_name as Nombre_Cliente,customer_surname as Apellido_Cliente, customer_age as Edad_Cliente, sucursal.branch_name as Nombre_Sucursal
 from cliente_edad
 INNER JOIN sucursal on cliente_edad.branch_id = sucursal.branch_id
-WHERE Nombre_Cliente like "brendan%"
+WHERE Nombre_Cliente = "Brendan"
 ORDER by branch_name;
 
 --PUNTO 4 (Selecciona de la tabla de préstamos, los préstamos con un importe mayor a $80.000 y los préstamos prendarios)
-SELECT loan_id, loan_type, loan_date, loan_total, customer_id
-from prestamo
-WHERE loan_total>8000000 and loan_type like "prendario%";
+SELECT * 
+FROM prestamo
+WHERE loan_total > 8000000 
+UNION
+SELECT * 
+FROM prestamo
+WHERE loan_type = "PRENDARIO";
 
 --PUNTO 5 (Selecciona los prestamos cuyo importe sea mayor que el importe medio de todos los prestamos)
 SELECT loan_id, loan_type, loan_date, loan_total, customer_id 
